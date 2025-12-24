@@ -29,3 +29,9 @@ dependencyResolutionManagement {
 }
 
 include(":composeApp")
+include(":shared")
+include(":shared:core")
+include(":shared:core:database")
+include(":shared:core:network")
+include(":shared:core:data")
+include(":shared:core:common")
