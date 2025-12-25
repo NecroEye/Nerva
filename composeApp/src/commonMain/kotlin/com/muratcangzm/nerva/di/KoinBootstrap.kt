@@ -5,18 +5,19 @@ import org.koin.core.KoinApplication
 import org.koin.core.context.startKoin
 
 object KoinBootstrap {
+
     private var started: KoinApplication? = null
 
     fun init(platformContext: PlatformContext): KoinApplication {
         started?.let { return it }
 
-        val allModules = buildList {
-            addAll(appModules(platformContext))
-            addAll(viewModelModules())
+        val all = appModules(platformContext) + viewModelModules()
+
+        val app = startKoin {
+            modules(all)
         }
 
-        return startKoin {
-            modules(allModules)
-        }.also { started = it }
+        started = app
+        return app
     }
 }

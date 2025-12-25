@@ -42,8 +42,8 @@ kotlin {
 sqldelight {
     databases {
         create("NervaDatabase") {
-            packageName.set("com.muratcangzm.shared.core.database")
-            // schemaOutputDirectory.set(file("src/commonMain/sqldelight/databases"))
+            packageName.set("com.muratcangzm.database")
+            schemaOutputDirectory.set(file("src/commonMain/sqldelight/com/muratcangzm/database/schema"))
         }
     }
 }
