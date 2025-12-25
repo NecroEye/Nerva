@@ -25,7 +25,10 @@ kotlin {
 
             implementation(libs.multiplatform.settings.core)
             implementation(libs.multiplatform.settings.coroutines)
+            implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.kotlinx.datetime)
 
+            implementation(libs.sqldelight.coroutinesExtensions)
             implementation(libs.koin.core)
         }
 
