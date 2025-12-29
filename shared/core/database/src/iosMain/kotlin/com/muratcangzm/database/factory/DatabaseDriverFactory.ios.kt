@@ -11,7 +11,7 @@ actual class DatabaseDriverFactory actual constructor(
     actual fun createDriver(): SqlDriver {
         return NativeSqliteDriver(
             schema = NervaDatabase.Schema,
-            name = "nerva.db"
+            name = "nerva_dev_v2.db"
         )
     }
 }

@@ -44,6 +44,7 @@ sqldelight {
         create("NervaDatabase") {
             packageName.set("com.muratcangzm.database")
             schemaOutputDirectory.set(file("src/commonMain/sqldelight/com/muratcangzm/database/schema"))
+            verifyMigrations.set(true)
         }
     }
 }

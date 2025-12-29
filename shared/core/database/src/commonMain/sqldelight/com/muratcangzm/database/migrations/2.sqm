@@ -1,0 +1,11 @@
+CREATE TABLE note_attachment (
+  id TEXT NOT NULL PRIMARY KEY,
+  noteId TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  uri TEXT NOT NULL,
+  label TEXT,
+  isPrimary INTEGER NOT NULL DEFAULT 0,
+  createdAt INTEGER NOT NULL
+);
+
+CREATE INDEX note_attachment_noteId_idx ON note_attachment(noteId);

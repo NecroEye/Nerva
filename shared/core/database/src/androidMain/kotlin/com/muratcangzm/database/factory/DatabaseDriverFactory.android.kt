@@ -13,7 +13,7 @@ actual class DatabaseDriverFactory actual constructor(
         return AndroidSqliteDriver(
             schema = NervaDatabase.Schema,
             context = platformContext.androidAppContext,
-            name = "nerva.db"
+            name = "nerva_dev_v2.db"
         )
     }
 }

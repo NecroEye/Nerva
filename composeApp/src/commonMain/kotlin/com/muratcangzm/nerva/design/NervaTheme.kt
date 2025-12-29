@@ -18,8 +18,8 @@ data class NervaBrand(
 
 internal val LocalNervaBrand = staticCompositionLocalOf {
     NervaBrand(
-        gradientStart = NervaColors.Cyan,
-        gradientEnd = NervaColors.Violet
+        gradientStart = NervaColors.Ocean,
+        gradientEnd = NervaColors.Forest
     )
 }
 
@@ -29,14 +29,14 @@ object NervaBranding {
 }
 
 private val DarkScheme: ColorScheme = darkColorScheme(
-    primary = NervaColors.Cyan,
-    onPrimary = NervaColors.DarkBg,
+    primary = NervaColors.Ocean,
+    onPrimary = NervaColors.TextOnDark,
 
-    secondary = NervaColors.Violet,
+    secondary = NervaColors.Forest,
     onSecondary = NervaColors.TextOnDark,
 
-    tertiary = NervaColors.Coral,
-    onTertiary = NervaColors.TextOnDark,
+    tertiary = NervaColors.Mint,
+    onTertiary = NervaColors.TextOnLight,
 
     background = NervaColors.DarkBg,
     onBackground = NervaColors.TextOnDark,
@@ -54,14 +54,14 @@ private val DarkScheme: ColorScheme = darkColorScheme(
 )
 
 private val LightScheme: ColorScheme = lightColorScheme(
-    primary = NervaColors.Violet,
-    onPrimary = NervaColors.LightSurface,
+    primary = NervaColors.OceanDeep,
+    onPrimary = Color.White,
 
-    secondary = NervaColors.Cyan,
-    onSecondary = NervaColors.TextOnLight,
+    secondary = NervaColors.ForestDeep,
+    onSecondary = Color.White,
 
-    tertiary = NervaColors.Coral,
-    onTertiary = NervaColors.LightSurface,
+    tertiary = NervaColors.Teal,
+    onTertiary = Color.White,
 
     background = NervaColors.LightBg,
     onBackground = NervaColors.TextOnLight,
@@ -75,7 +75,7 @@ private val LightScheme: ColorScheme = lightColorScheme(
     outline = NervaColors.LightOutline,
 
     error = NervaColors.Error,
-    onError = NervaColors.LightSurface
+    onError = Color.White
 )
 
 @Composable
@@ -83,8 +83,8 @@ fun NervaTheme(
     dark: Boolean = true,
     dimens: NervaDimens = NervaDimens(),
     brand: NervaBrand = NervaBrand(
-        gradientStart = NervaColors.Cyan,
-        gradientEnd = NervaColors.Violet
+        gradientStart = NervaColors.Ocean,
+        gradientEnd = NervaColors.Forest
     ),
     content: @Composable () -> Unit
 ) {
