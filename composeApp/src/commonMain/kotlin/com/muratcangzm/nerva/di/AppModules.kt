@@ -7,6 +7,7 @@ import com.muratcangzm.common.platformModule
 import com.muratcangzm.data.repo.NoteRepository
 import com.muratcangzm.data.repo.SqlDelightNoteRepository
 import com.muratcangzm.database.NervaDatabaseProvider
+import com.muratcangzm.nerva.app.nav.AppNavigator
 import org.koin.core.module.Module
 import org.koin.dsl.module
 

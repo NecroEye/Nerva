@@ -5,10 +5,11 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
-    androidTarget {
+    androidTarget    {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
         }
@@ -39,6 +40,7 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
+            implementation(compose.animation)
 
             // Lifecycle (KMP)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
