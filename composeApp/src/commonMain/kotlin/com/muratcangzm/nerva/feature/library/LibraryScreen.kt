@@ -40,7 +40,8 @@
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun LibraryScreen(
-        onOpenNote: (String) -> Unit = {}
+        onOpenNote: (String) -> Unit = {},
+        onCreateNote: () -> Unit = {},
     ) {
         val onOpenNoteState = rememberUpdatedState(onOpenNote)
 
@@ -52,7 +53,7 @@
         LaunchedEffect(viewModel) {
             viewModel.effects.collectLatest { effect ->
                 when (effect) {
-                    is LibraryEffect.NavigateToNote -> onOpenNoteState.value(effect.id)
+                    is LibraryEffect.NavigateToEdit -> onOpenNoteState.value(effect.id)
                     is LibraryEffect.ShowMessage -> snackBarHostState.showSnackbar(effect.message)
                 }
             }
@@ -65,7 +66,7 @@
                 snackbarHost = { SnackbarHost(snackBarHostState) },
                 topBar = { TopAppBar(title = { Text(text = "Library") }) },
                 floatingActionButton = {
-                    FloatingActionButton(onClick = { viewModel.dispatch(LibraryAction.CreateNote) }) {
+                    FloatingActionButton(onClick = onCreateNote) {
                         Text(text = "+")
                     }
                 }

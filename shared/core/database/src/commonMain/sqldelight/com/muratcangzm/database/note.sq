@@ -88,3 +88,26 @@ LEFT JOIN note_attachment a
 WHERE note.title LIKE '%' || ?1 || '%'
    OR note.content LIKE '%' || ?1 || '%'
 ORDER BY note.pinned DESC, updatedAt DESC;
+
+selectAttachmentsByNoteId:
+SELECT
+  id,
+  noteId,
+  kind,
+  uri,
+  label,
+  isPrimary,
+  createdAt
+FROM note_attachment
+WHERE noteId = ?1
+ORDER BY isPrimary DESC, createdAt DESC;
+
+deleteAttachmentsByNoteId:
+DELETE FROM note_attachment
+WHERE noteId = ?1;
+
+insertAttachment:
+INSERT OR REPLACE INTO note_attachment(
+  id, noteId, kind, uri, label, isPrimary, createdAt
+)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7);

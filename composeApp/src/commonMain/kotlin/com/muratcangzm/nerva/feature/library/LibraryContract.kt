@@ -43,11 +43,10 @@ sealed interface LibraryAction {
     data class TogglePin(val id: String, val pinned: Long) : LibraryAction
     data class DeleteNote(val id: String) : LibraryAction
     data class Reorder(val section: LibraryReorderSection, val fromIndex: Int, val toIndex: Int) : LibraryAction
-    data object CreateNote : LibraryAction
 }
 
 sealed interface LibraryEffect {
-    data class NavigateToNote(val id: String) : LibraryEffect
+    data class NavigateToEdit(val id: String) : LibraryEffect
     data class ShowMessage(val message: String) : LibraryEffect
 }
 

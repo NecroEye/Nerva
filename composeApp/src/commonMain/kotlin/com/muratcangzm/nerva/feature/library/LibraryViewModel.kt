@@ -93,30 +93,10 @@ class LibraryViewModel(
     fun dispatch(action: LibraryAction) {
         when (action) {
             is LibraryAction.QueryChanged -> _state.update { it.copy(query = action.value, isLoading = true) }
-            LibraryAction.CreateNote -> createNote()
-            is LibraryAction.OpenNote -> _effects.trySend(LibraryEffect.NavigateToNote(action.id))
+            is LibraryAction.OpenNote -> _effects.trySend(LibraryEffect.NavigateToEdit(action.id))
             is LibraryAction.TogglePin -> togglePin(id = action.id, pinned = action.pinned)
             is LibraryAction.DeleteNote -> deleteNote(id = action.id)
             is LibraryAction.Reorder -> orderState.update { it.reorder(action.section, action.fromIndex, action.toIndex) }
-        }
-    }
-
-    private fun createNote() {
-        viewModelScope.launch(dispatchers.io) {
-            val now = Clock.System.now().toEpochMilliseconds()
-            val id = NoteId(newId(now))
-
-            val note = Note(
-                id = id,
-                title = "New note",
-                content = "",
-                createdAtEpochMs = now,
-                updatedAtEpochMs = now,
-                pinned = 0L
-            )
-
-            noteRepository.upsert(note)
-            _effects.trySend(LibraryEffect.NavigateToNote(id.value))
         }
     }
 
