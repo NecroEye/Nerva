@@ -52,6 +52,9 @@ kotlin {
 
             // Nav3
             implementation(libs.bundles.common.nav3)
+
+            //Coil
+            implementation(libs.bundles.coil)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

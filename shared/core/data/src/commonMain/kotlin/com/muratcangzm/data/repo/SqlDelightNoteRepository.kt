@@ -72,7 +72,7 @@ class SqlDelightNoteRepository(
                 id = note.id.value,
                 title = note.title,
                 content = note.content,
-                createdAt = note.createdAtEpochMs,
+                createdAt = note.createdAtEpochMs, 
                 updatedAt = note.updatedAtEpochMs,
                 pinned = note.pinned
             )

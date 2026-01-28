@@ -1,15 +1,22 @@
 package com.muratcangzm.nerva.feature.note.noteEditor
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,12 +36,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.rememberAsyncImagePainter
 import com.muratcangzm.nerva.feature.library.components.background.BrandGradientBackground
+import com.muratcangzm.nerva.feature.library.components.chip.TagChip
 import com.muratcangzm.nerva.feature.note.shared.NoteAttachmentUi
 import com.muratcangzm.nerva.feature.note.shared.rememberAttachmentPicker
 import com.muratcangzm.nerva.feature.note.shared.rememberKoinNavViewModel
+import com.muratcangzm.nerva.feature.note.shared.rememberPdfThumbnailPainter
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,7 +86,15 @@ fun NoteEditorScreen(
             topBar = {
                 TopAppBar(
                     title = { Text(if (mode is NoteEditorScreen.Mode.Create) "New note" else "Edit note") },
-                    navigationIcon = { TextButton(onClick = onClose) { Text("Close") } },
+                    navigationIcon = {
+                        TextButton(onClick = onClose) {
+                            Text(
+                                text = "✕",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    },
                     actions = {
                         TextButton(
                             onClick = { vm.dispatch(NoteEditorAction.SaveClicked) },
@@ -130,48 +152,143 @@ private fun AttachmentSection(
     onAddImage: () -> Unit,
     onAddPdf: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = "Attachments",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        var menu by remember { mutableStateOf(false) }
-        TextButton(onClick = { menu = true }) { Text("Add") }
-
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            DropdownMenuItem(
-                text = { Text("Image") },
-                onClick = { menu = false; onAddImage() }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Attachments",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            DropdownMenuItem(
-                text = { Text("PDF") },
-                onClick = { menu = false; onAddPdf() }
-            )
+
+            var menu by remember { mutableStateOf(false) }
+            TextButton(onClick = { menu = true }) { Text("Add") }
+
+            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                DropdownMenuItem(
+                    text = { Text("🖼️ Image") },
+                    onClick = { menu = false; onAddImage() }
+                )
+                DropdownMenuItem(
+                    text = { Text("📄 PDF") },
+                    onClick = { menu = false; onAddPdf() }
+                )
+            }
         }
-    }
 
-    if (attachments.isEmpty()) {
-        Text(
-            text = "No attachments",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        return
-    }
+        KindRow(attachments = attachments)
 
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        items(items = attachments, key = { it.id }) { a ->
-            TextButton(onClick = { onRemove(a.id) }) {
-                Text("${a.kind.label}: ${a.displayName}")
+        if (attachments.isEmpty()) {
+            Text(
+                text = "No attachments",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(
+                    items = attachments,
+                    key = { it.id }
+                ) { a ->
+                    AttachmentChipItem(a = a, onRemove = { onRemove(a.id) })
+                }
             }
         }
     }
 }
+
+@Composable
+private fun KindRow(attachments: List<NoteAttachmentUi>) {
+    val kinds = remember(attachments) { attachments.map { it.kind }.distinct() }
+    if (kinds.isEmpty()) return
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Kind",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        kinds.forEach { k ->
+            TagChip(
+                text = k.label,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun AttachmentChipItem(
+    a: NoteAttachmentUi,
+    onRemove: () -> Unit,
+) {
+    val shape = RoundedCornerShape(14.dp)
+    val pdfPainter =
+        if (a.kind == com.muratcangzm.nerva.feature.note.shared.NoteAttachmentKind.Pdf) {
+            rememberPdfThumbnailPainter(a.uri)
+        } else null
+
+    TextButton(
+        onClick = onRemove,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(shape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
+                contentAlignment = Alignment.Center
+            ) {
+                when (a.kind) {
+                    com.muratcangzm.nerva.feature.note.shared.NoteAttachmentKind.Image -> {
+                        Image(
+                            painter = rememberAsyncImagePainter(a.uri),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+
+                    com.muratcangzm.nerva.feature.note.shared.NoteAttachmentKind.Pdf -> {
+                        if (pdfPainter != null) {
+                            Image(
+                                painter = pdfPainter,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text("📄")
+                        }
+                    }
+                }
+            }
+
+            Column(modifier = Modifier.width(150.dp)) {
+                Text(
+                    text = a.displayName,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                TagChip(
+                    text = a.kind.label,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f),
+                )
+            }
+        }
+    }
+}
+
 
 object NoteEditorScreen {
     sealed interface Mode {
