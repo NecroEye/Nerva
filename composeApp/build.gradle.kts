@@ -55,6 +55,9 @@ kotlin {
 
             //Coil
             implementation(libs.bundles.coil)
+
+            //Settings Storage
+            implementation(libs.bundles.common.storage)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

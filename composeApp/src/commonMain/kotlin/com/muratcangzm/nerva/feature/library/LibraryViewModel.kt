@@ -9,6 +9,7 @@ import com.muratcangzm.data.model.NoteAttachmentKind
 import com.muratcangzm.data.model.NoteAttachmentPreview
 import com.muratcangzm.data.model.NoteId
 import com.muratcangzm.data.repo.NoteRepository
+import com.muratcangzm.nerva.feature.library.components.search.RecentSearchesStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
@@ -28,13 +29,13 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.random.Random
 import kotlin.time.Clock
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class LibraryViewModel(
     private val noteRepository: NoteRepository,
-    private val dispatchers: AppDispatchers
+    private val dispatchers: AppDispatchers,
+    private val recentStore: RecentSearchesStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LibraryState(isLoading = true))
@@ -46,15 +47,23 @@ class LibraryViewModel(
     private val orderState = MutableStateFlow(LibraryOrderState())
 
     init {
+        recentStore.recent
+            .onEach { list -> _state.update { it.copy(recentSearches = list) } }
+            .launchIn(viewModelScope)
+
         val queryFlow = state
             .map { it.query.trim() }
             .distinctUntilChanged()
             .debounce(250)
-
-        val repoNotesFlow = queryFlow
-            .flatMapLatest { q ->
-                noteRepository.observeNotes(query = q.takeIf { it.isNotBlank() })
+            .onEach { q ->
+                if (q.isNotBlank()) {
+                    recentStore.record(q)
+                }
             }
+
+        val repoNotesFlow = queryFlow.flatMapLatest { q ->
+            noteRepository.observeNotes(query = q.takeIf { it.isNotBlank() })
+        }
 
         repoNotesFlow
             .combine(orderState) { notes, order -> order.apply(notes) }
@@ -96,7 +105,32 @@ class LibraryViewModel(
             is LibraryAction.OpenNote -> _effects.trySend(LibraryEffect.NavigateToEdit(action.id))
             is LibraryAction.TogglePin -> togglePin(id = action.id, pinned = action.pinned)
             is LibraryAction.DeleteNote -> deleteNote(id = action.id)
-            is LibraryAction.Reorder -> orderState.update { it.reorder(action.section, action.fromIndex, action.toIndex) }
+            is LibraryAction.Reorder -> {
+                val pinnedIds = _state.value.notes
+                    .filter { it.pinned.toPinnedBoolean() }
+                    .map { it.id }
+
+                val normalIds = _state.value.notes
+                    .filterNot { it.pinned.toPinnedBoolean() }
+                    .map { it.id }
+
+                orderState.update {
+                    it.reorder(
+                        section = action.section,
+                        fromIndex = action.fromIndex,
+                        toIndex = action.toIndex,
+                        currentPinned = pinnedIds,
+                        currentNormal = normalIds
+                    )
+                }
+            }
+            LibraryAction.ClearRecentSearches -> clearRecent()
+        }
+    }
+
+    private fun clearRecent() {
+        viewModelScope.launch {
+            recentStore.clear()
         }
     }
 
@@ -119,11 +153,6 @@ class LibraryViewModel(
             _state.update { it.copy(pendingDeletionIds = it.pendingDeletionIds - id) }
             _effects.trySend(LibraryEffect.ShowMessage("Deleted"))
         }
-    }
-
-    private fun newId(now: Long): String {
-        val r = Random.nextLong().toString(16)
-        return "$now-$r"
     }
 }
 
@@ -152,10 +181,23 @@ private data class LibraryOrderState(
         return pinnedSorted + normalSorted
     }
 
-    fun reorder(section: LibraryReorderSection, fromIndex: Int, toIndex: Int): LibraryOrderState {
+    fun reorder(
+        section: LibraryReorderSection,
+        fromIndex: Int,
+        toIndex: Int,
+        currentPinned: List<String>,
+        currentNormal: List<String>,
+    ): LibraryOrderState {
         return when (section) {
-            LibraryReorderSection.Pinned -> copy(pinnedOrder = pinnedOrder.moved(fromIndex, toIndex))
-            LibraryReorderSection.Normal -> copy(normalOrder = normalOrder.moved(fromIndex, toIndex))
+            LibraryReorderSection.Pinned -> {
+                val base = pinnedOrder.ifEmpty { currentPinned }
+                copy(pinnedOrder = base.moved(fromIndex, toIndex))
+            }
+
+            LibraryReorderSection.Normal -> {
+                val base = normalOrder.ifEmpty { currentNormal }
+                copy(normalOrder = base.moved(fromIndex, toIndex))
+            }
         }
     }
 

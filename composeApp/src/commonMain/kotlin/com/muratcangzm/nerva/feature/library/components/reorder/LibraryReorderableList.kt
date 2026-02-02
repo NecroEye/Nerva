@@ -21,10 +21,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -82,8 +83,7 @@ private class GridReorderState(
         draggingOffsetX += delta.x
         draggingOffsetY += delta.y
 
-        val fromInfo =
-            gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == fromIndex } ?: return
+        val fromInfo = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == fromIndex } ?: return
         val fromTopLeft = fromInfo.offset.toOffset() + Offset(draggingOffsetX, draggingOffsetY)
         val fromCenter = fromTopLeft + Offset(fromInfo.size.width / 2f, fromInfo.size.height / 2f)
 
@@ -101,7 +101,6 @@ private class GridReorderState(
 
         onMove(fromIndex, toIndex)
 
-        // offset'i stabilize et (zıplamayı azaltır)
         val newFromInfo = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == toIndex }
         if (newFromInfo != null) {
             val deltaOffset = fromInfo.offset - newFromInfo.offset
@@ -122,6 +121,7 @@ fun LibraryReorderableGrid(
     onTogglePin: (id: String, pinned: Long) -> Unit,
     onDelete: (String) -> Unit,
     onReorder: (section: LibraryReorderSection, fromIndex: Int, toIndex: Int) -> Unit,
+    query: String,
     modifier: Modifier = Modifier
 ) {
     val pinned = notes.filter { it.pinned.toPinnedBoolean() }
@@ -138,35 +138,39 @@ fun LibraryReorderableGrid(
 
     val gridState = rememberLazyGridState()
 
-    val sectionIndexPinned = remember(pinned) { pinned.map { it.id } }
-    val sectionIndexNormal = remember(normal) { normal.map { it.id } }
+    val pinnedIds = remember(pinned) { pinned.map { it.id } }
+    val normalIds = remember(normal) { normal.map { it.id } }
 
-    fun isNote(index: Int): Boolean = entries.getOrNull(index) is Entry.Note
-    fun entrySection(index: Int): LibraryReorderSection? =
-        (entries.getOrNull(index) as? Entry.Note)?.section
+    val entriesState = rememberUpdatedState(entries)
+    val pinnedIdsState = rememberUpdatedState(pinnedIds)
+    val normalIdsState = rememberUpdatedState(normalIds)
 
-    val reorderState = remember(gridState, entries, pinned, normal) {
+    fun isNote(e: List<Entry>, index: Int): Boolean = e.getOrNull(index) is Entry.Note
+    fun sectionOf(e: List<Entry>, index: Int): LibraryReorderSection? = (e.getOrNull(index) as? Entry.Note)?.section
+
+    val reorderState = remember(gridState) {
         GridReorderState(
             gridState = gridState,
             canMove = { from, to ->
-                isNote(from) && isNote(to) && entrySection(from) == entrySection(to)
+                val e = entriesState.value
+                isNote(e, from) && isNote(e, to) && sectionOf(e, from) == sectionOf(e, to)
             },
             onMove = { from, to ->
-                val fromEntry = entries[from] as Entry.Note
-                val toEntry = entries[to] as Entry.Note
+                val e = entriesState.value
+                val fromEntry = e[from] as Entry.Note
+                val toEntry = e[to] as Entry.Note
 
                 val section = fromEntry.section
                 val fromId = fromEntry.item.id
                 val toId = toEntry.item.id
 
-                val fromIndex = when (section) {
-                    LibraryReorderSection.Pinned -> sectionIndexPinned.indexOf(fromId)
-                    LibraryReorderSection.Normal -> sectionIndexNormal.indexOf(fromId)
+                val currentIds = when (section) {
+                    LibraryReorderSection.Pinned -> pinnedIdsState.value
+                    LibraryReorderSection.Normal -> normalIdsState.value
                 }
-                val toIndex = when (section) {
-                    LibraryReorderSection.Pinned -> sectionIndexPinned.indexOf(toId)
-                    LibraryReorderSection.Normal -> sectionIndexNormal.indexOf(toId)
-                }
+
+                val fromIndex = currentIds.indexOf(fromId)
+                val toIndex = currentIds.indexOf(toId)
 
                 if (fromIndex >= 0 && toIndex >= 0) onReorder(section, fromIndex, toIndex)
             }
@@ -198,10 +202,11 @@ fun LibraryReorderableGrid(
 
                 is Entry.Note -> {
                     val isDragging = reorderState.draggingIndex == index
-                    val dragOffset = if (isDragging) Offset(
-                        reorderState.draggingOffsetX,
-                        reorderState.draggingOffsetY
-                    ) else Offset.Zero
+                    val dragOffset = if (isDragging) {
+                        Offset(reorderState.draggingOffsetX, reorderState.draggingOffsetY)
+                    } else {
+                        Offset.Zero
+                    }
 
                     AnimatedVisibility(
                         visible = entry.item.id !in pendingDeletionIds,
@@ -216,6 +221,7 @@ fun LibraryReorderableGrid(
                                 onTogglePin(entry.item.id, if (pinnedNow) 0L else 1L)
                             },
                             onDelete = { onDelete(entry.item.id) },
+                            query = query,
                             modifier = Modifier
                                 .zIndex(if (isDragging) 1f else 0f)
                                 .graphicsLayer {
@@ -229,15 +235,9 @@ fun LibraryReorderableGrid(
                                 }
                                 .pointerInput(entry.key) {
                                     detectDragGesturesAfterLongPress(
-                                        onDragStart = {
-                                            reorderState.startDragging(index)
-                                        },
-                                        onDragCancel = {
-                                            reorderState.stopDragging()
-                                        },
-                                        onDragEnd = {
-                                            reorderState.stopDragging()
-                                        },
+                                        onDragStart = { reorderState.startDragging(index) },
+                                        onDragCancel = { reorderState.stopDragging() },
+                                        onDragEnd = { reorderState.stopDragging() },
                                         onDrag = { change, dragAmount ->
                                             change.consume()
                                             reorderState.dragBy(dragAmount)

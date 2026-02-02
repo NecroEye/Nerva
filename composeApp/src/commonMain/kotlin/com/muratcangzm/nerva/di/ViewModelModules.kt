@@ -8,7 +8,7 @@ import org.koin.dsl.module
 fun viewModelModules(): List<Module> = listOf(
     module {
 
-        factory { LibraryViewModel(noteRepository = get(), dispatchers = get()) }
+        factory { LibraryViewModel(noteRepository = get(), dispatchers = get(), recentStore = get()) }
 
         factory { NoteEditorViewModel(noteRepository = get(), dispatchers = get()) }
     }

@@ -6,9 +6,7 @@ import androidx.compose.runtime.Composable
 actual fun rememberAttachmentPicker(
     onPicked: (PickedAttachment) -> Unit,
     onMessage: suspend (String) -> Unit,
-): AttachmentPicker {
-    return object : AttachmentPicker {
-        override fun pickImage() {}
-        override fun pickPdf() {}
-    }
+): AttachmentPicker = object : AttachmentPicker {
+    override fun pickImage() {}
+    override fun pickPdf() {}
 }

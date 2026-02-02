@@ -8,7 +8,8 @@ data class LibraryState(
     val isLoading: Boolean = true,
     val notes: List<LibraryNoteItem> = emptyList(),
     val errorMessage: String? = null,
-    val pendingDeletionIds: Set<String> = emptySet()
+    val pendingDeletionIds: Set<String> = emptySet(),
+    val recentSearches: List<String> = emptyList(),
 )
 
 enum class LibraryReorderSection { Pinned, Normal }
@@ -43,6 +44,7 @@ sealed interface LibraryAction {
     data class TogglePin(val id: String, val pinned: Long) : LibraryAction
     data class DeleteNote(val id: String) : LibraryAction
     data class Reorder(val section: LibraryReorderSection, val fromIndex: Int, val toIndex: Int) : LibraryAction
+    data object ClearRecentSearches : LibraryAction
 }
 
 sealed interface LibraryEffect {

@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,8 @@ import com.muratcangzm.nerva.feature.library.LibraryAttachmentKind
 import com.muratcangzm.nerva.feature.library.LibraryAttachmentPreview
 import com.muratcangzm.nerva.feature.library.LibraryNoteItem
 import com.muratcangzm.nerva.feature.library.components.chip.TagChip
+import com.muratcangzm.nerva.feature.library.components.search.HighlightStyle
+import com.muratcangzm.nerva.feature.library.components.search.highlightText
 import com.muratcangzm.nerva.feature.library.util.formatShortDateTime
 import com.muratcangzm.nerva.feature.note.shared.rememberPdfThumbnailPainter
 
@@ -50,6 +53,7 @@ import com.muratcangzm.nerva.feature.note.shared.rememberPdfThumbnailPainter
 @Composable
 fun LibraryNoteCard(
     item: LibraryNoteItem,
+    query: String,
     onOpen: () -> Unit,
     onTogglePin: () -> Unit,
     onDelete: () -> Unit,
@@ -62,6 +66,23 @@ fun LibraryNoteCard(
     val primary = item.attachmentPreviews.firstOrNull()
 
     var menuExpanded by remember { mutableStateOf(false) }
+
+    val highlight = HighlightStyle(
+        background = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
+        foreground = MaterialTheme.colorScheme.onSurface
+    )
+
+    val titleText = highlightText(
+        text = item.title.ifBlank { "Untitled" },
+        query = query,
+        style = highlight
+    )
+
+    val previewText = highlightText(
+        text = item.preview,
+        query = query,
+        style = highlight
+    )
 
     ElevatedCard(
         onClick = onOpen,
@@ -101,10 +122,10 @@ fun LibraryNoteCard(
                 ) {
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = item.title.ifBlank { "Untitled" },
+                            text = titleText,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .basicMarquee(),
@@ -153,48 +174,71 @@ fun LibraryNoteCard(
                     }
                 }
 
-                // ✅ HERO PREVIEW: sağdaki yazı kalktı, görsel büyük.
                 if (primary != null) {
-                    AttachmentHeroPreview(preview = primary)
+                    AttachmentHeroPreview(
+                        preview = primary,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TagChip(
-                            text = when (primary.kind) {
-                                LibraryAttachmentKind.Photo -> "Image"
-                                LibraryAttachmentKind.Pdf -> "PDF"
-                            },
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f),
+                            text = primary.kind.toChipLabel(),
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f)
                         )
-
-                        if (item.attachmentsCount > 1) {
+                        if (isPinned) {
                             TagChip(
-                                text = "+${item.attachmentsCount - 1}",
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f),
+                                text = "Pinned",
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f)
                             )
                         }
                     }
-                } else if (item.preview.isNotBlank()) {
-                    Text(
-                        text = item.preview,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                } else {
+                    if (item.preview.isNotBlank()) {
+                        PreviewBubble(
+                            text = previewText,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
 
-                if (isPinned) {
-                    TagChip(
-                        text = "Pinned",
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f),
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
+                    if (isPinned) {
+                        TagChip(
+                            text = "Pinned",
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f)
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PreviewBubble(
+    text: androidx.compose.ui.text.AnnotatedString,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(14.dp)
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
+                shape = shape
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -205,17 +249,29 @@ private fun AttachmentHeroPreview(
 ) {
     val shape = RoundedCornerShape(18.dp)
 
+    val pdfPainter = if (preview.kind == LibraryAttachmentKind.Pdf) {
+        rememberPdfThumbnailPainter(preview.uri)
+    } else null
+
+    val photoPainter = if (preview.kind == LibraryAttachmentKind.Photo) {
+        rememberAsyncImagePainter(preview.uri)
+    } else null
+
     Box(
         modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(1.45f)
-            .clip(shape),
+            .clip(shape)
+            .aspectRatio(1.55f)
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
+                shape = shape
+            ),
         contentAlignment = Alignment.Center
     ) {
         when (preview.kind) {
             LibraryAttachmentKind.Photo -> {
                 Image(
-                    painter = rememberAsyncImagePainter(preview.uri),
+                    painter = photoPainter!!,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -223,13 +279,12 @@ private fun AttachmentHeroPreview(
             }
 
             LibraryAttachmentKind.Pdf -> {
-                val pdfPainter = rememberPdfThumbnailPainter(preview.uri)
                 if (pdfPainter != null) {
                     Image(
                         painter = pdfPainter,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit
+                        contentScale = ContentScale.Crop
                     )
                 } else {
                     Text("📄", style = MaterialTheme.typography.headlineSmall)
@@ -237,4 +292,9 @@ private fun AttachmentHeroPreview(
             }
         }
     }
+}
+
+private fun LibraryAttachmentKind.toChipLabel(): String = when (this) {
+    LibraryAttachmentKind.Photo -> "Image"
+    LibraryAttachmentKind.Pdf -> "PDF"
 }

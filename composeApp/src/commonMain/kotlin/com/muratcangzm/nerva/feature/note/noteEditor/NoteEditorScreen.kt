@@ -2,12 +2,15 @@ package com.muratcangzm.nerva.feature.note.noteEditor
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,6 +29,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -45,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.rememberAsyncImagePainter
 import com.muratcangzm.nerva.feature.library.components.background.BrandGradientBackground
 import com.muratcangzm.nerva.feature.library.components.chip.TagChip
+import com.muratcangzm.nerva.feature.note.shared.NoteAttachmentKind
 import com.muratcangzm.nerva.feature.note.shared.NoteAttachmentUi
 import com.muratcangzm.nerva.feature.note.shared.rememberAttachmentPicker
 import com.muratcangzm.nerva.feature.note.shared.rememberKoinNavViewModel
@@ -68,6 +73,17 @@ fun NoteEditorScreen(
         onPicked = { vm.onPickedAttachment(it) },
         onMessage = { msg -> snack.showSnackbar(msg) }
     )
+
+    var viewer by remember { mutableStateOf<NoteAttachmentUi?>(null) }
+
+    viewer?.let { a ->
+        com.muratcangzm.nerva.feature.note.components.AttachmentViewerDialog(
+            title = a.displayName,
+            kind = a.kind,
+            uri = a.uri,
+            onDismiss = { viewer = null }
+        )
+    }
 
     LaunchedEffect(vm) {
         vm.effects.collectLatest { eff ->
@@ -137,6 +153,7 @@ fun NoteEditorScreen(
                     onRemove = { vm.dispatch(NoteEditorAction.RemoveAttachment(it)) },
                     onAddImage = { vm.dispatch(NoteEditorAction.AddImageClicked) },
                     onAddPdf = { vm.dispatch(NoteEditorAction.AddPdfClicked) },
+                    onOpen = { a -> viewer = a }
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -146,16 +163,18 @@ fun NoteEditorScreen(
 }
 
 @Composable
-private fun AttachmentSection(
+fun AttachmentSection(
     attachments: List<NoteAttachmentUi>,
     onRemove: (String) -> Unit,
     onAddImage: () -> Unit,
     onAddPdf: () -> Unit,
+    onOpen: (NoteAttachmentUi) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "Attachments",
@@ -178,7 +197,7 @@ private fun AttachmentSection(
             }
         }
 
-        KindRow(attachments = attachments)
+        KindRow(attachments)
 
         if (attachments.isEmpty()) {
             Text(
@@ -187,14 +206,11 @@ private fun AttachmentSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(
-                    items = attachments,
-                    key = { it.id }
-                ) { a ->
-                    AttachmentChipItem(a = a, onRemove = { onRemove(a.id) })
-                }
-            }
+            AttachmentGridRow(
+                attachments = attachments,
+                onRemove = onRemove,
+                onOpen = onOpen
+            )
         }
     }
 }
@@ -216,75 +232,114 @@ private fun KindRow(attachments: List<NoteAttachmentUi>) {
         kinds.forEach { k ->
             TagChip(
                 text = k.label,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f),
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f)
             )
         }
     }
 }
 
 @Composable
-private fun AttachmentChipItem(
+private fun AttachmentGridRow(
+    attachments: List<NoteAttachmentUi>,
+    onRemove: (String) -> Unit,
+    onOpen: (NoteAttachmentUi) -> Unit,
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(horizontal = 2.dp)
+    ) {
+        items(items = attachments, key = { it.id }) { a ->
+            AttachmentCardItem(
+                a = a,
+                onOpen = { onOpen(a) },
+                onRemove = { onRemove(a.id) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AttachmentCardItem(
     a: NoteAttachmentUi,
+    onOpen: () -> Unit,
     onRemove: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(14.dp)
-    val pdfPainter =
-        if (a.kind == com.muratcangzm.nerva.feature.note.shared.NoteAttachmentKind.Pdf) {
-            rememberPdfThumbnailPainter(a.uri)
-        } else null
+    val shape = RoundedCornerShape(18.dp)
 
-    TextButton(
-        onClick = onRemove,
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+    Column(
+        modifier = Modifier
+            .width(140.dp)
+            .clip(shape)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(shape)
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
+                    shape = shape
+                )
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.02f))
+                .clickable(onClick = onOpen),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(shape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
-                contentAlignment = Alignment.Center
-            ) {
-                when (a.kind) {
-                    com.muratcangzm.nerva.feature.note.shared.NoteAttachmentKind.Image -> {
+            when (a.kind) {
+                com.muratcangzm.nerva.feature.note.shared.NoteAttachmentKind.Image -> {
+                    Image(
+                        painter = rememberAsyncImagePainter(a.uri),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                com.muratcangzm.nerva.feature.note.shared.NoteAttachmentKind.Pdf -> {
+                    val pdfPainter = rememberPdfThumbnailPainter(a.uri)
+                    if (pdfPainter != null) {
                         Image(
-                            painter = rememberAsyncImagePainter(a.uri),
+                            painter = pdfPainter,
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
-                    }
-
-                    com.muratcangzm.nerva.feature.note.shared.NoteAttachmentKind.Pdf -> {
-                        if (pdfPainter != null) {
-                            Image(
-                                painter = pdfPainter,
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Text("📄")
-                        }
+                    } else {
+                        Text("📄", style = MaterialTheme.typography.headlineSmall)
                     }
                 }
             }
 
-            Column(modifier = Modifier.width(150.dp)) {
-                Text(
-                    text = a.displayName,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                TagChip(
-                    text = a.kind.label,
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f),
-                )
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .size(26.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
+                onClick = onRemove
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text("✕", style = MaterialTheme.typography.labelLarge)
+                }
             }
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = a.displayName,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            TagChip(
+                text = a.kind.label,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.70f)
+            )
         }
     }
 }
