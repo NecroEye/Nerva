@@ -9,6 +9,8 @@ import com.muratcangzm.data.repo.SqlDelightNoteRepository
 import com.muratcangzm.database.NervaDatabaseProvider
 import com.muratcangzm.nerva.feature.library.components.search.RecentSearchesStore
 import com.muratcangzm.nerva.feature.library.components.search.SettingsRecentSearchesStore
+import com.muratcangzm.nerva.feature.schedule.data.InMemoryScheduleRepository
+import com.muratcangzm.nerva.feature.schedule.data.ScheduleRepository
 import com.russhwolf.settings.Settings
 import org.koin.core.module.Module
 import org.koin.dsl.module
@@ -25,5 +27,7 @@ fun appModules(platformContext: PlatformContext): List<Module> = listOf(
         single<Settings> { Settings() }
 
         single<RecentSearchesStore> { SettingsRecentSearchesStore(settings = get()) }
+
+        single<ScheduleRepository> { InMemoryScheduleRepository() }
     }
 )

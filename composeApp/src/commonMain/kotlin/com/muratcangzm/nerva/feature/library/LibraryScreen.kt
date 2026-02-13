@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -69,10 +70,12 @@ fun LibraryScreen(
             snackbarHost = { SnackbarHost(snackBarHostState) },
             topBar = { TopAppBar(title = { Text(text = "Library") }) },
             floatingActionButton = {
-                FloatingActionButton(onClick = onCreateNote) {
+                FloatingActionButton(
+                    modifier = Modifier.padding(bottom = 80.dp),
+                    onClick = onCreateNote) {
                     Text(text = "+")
                 }
-            }
+            },
         ) { padding ->
             Content(
                 padding = padding,
